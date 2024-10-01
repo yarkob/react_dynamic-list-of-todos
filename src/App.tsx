@@ -7,19 +7,36 @@ import { TodoList } from './components/TodoList';
 import { TodoFilter } from './components/TodoFilter';
 import { TodoModal } from './components/TodoModal';
 import { Loader } from './components/Loader';
-import { getTodos, getUser } from './api';
+import { getTodos } from './api';
 import { Todo } from './types/Todo';
-import { User } from './types/User';
 import { Options } from './types/Options';
+
+const getFilteredTodos = (
+  todos: Todo[],
+  option: Options,
+  query: string,
+): Todo[] => {
+  let filteredData = todos;
+
+  filteredData = filteredData.filter(filterTodo =>
+    filterTodo.title.toLowerCase().includes(query.toLowerCase()),
+  );
+
+  if (option === Options.Active) {
+    filteredData = filteredData.filter(checkTodo => !checkTodo.completed);
+  }
+
+  if (option === Options.Completed) {
+    filteredData = filteredData.filter(checkTodo => checkTodo.completed);
+  }
+
+  return filteredData;
+};
 
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [todo, setTodo] = useState<Todo | null>(null);
-  const [chosenUserId, setChosenUserId] = useState<number>(0);
-  const [user, setUser] = useState<User | null>(null);
+  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isShown, setIsShown] = useState(false);
-  const [isModalLoading, setIsModalLoading] = useState(false);
   const [option, setOption] = useState<Options>(Options.All);
   const [query, setQuery] = useState('');
 
@@ -27,27 +44,11 @@ export const App: React.FC = () => {
     getTodos().then(data => {
       setLoading(false);
 
-      let filteredData = data;
-
-      filteredData = filteredData.filter(filterTodo =>
-        filterTodo.title.toLowerCase().includes(query.toLowerCase()),
-      );
-
-      if (option === Options.Active) {
-        filteredData = filteredData.filter(checkTodo => !checkTodo.completed);
-      }
-
-      if (option === Options.Completed) {
-        filteredData = filteredData.filter(checkTodo => checkTodo.completed);
-      }
-
-      setTodos(filteredData);
+      setTodos(data);
     });
+  }, []);
 
-    if (chosenUserId) {
-      getUser(chosenUserId).then(data => setUser(data));
-    }
-  }, [chosenUserId, option, query]);
+  const filteredTodos = getFilteredTodos(todos, option, query);
 
   return (
     <>
@@ -67,25 +68,19 @@ export const App: React.FC = () => {
             <div className="block">
               {loading && <Loader />}
               <TodoList
-                chosenTodo={todo}
-                setTodo={setTodo}
-                setChosenUserId={setChosenUserId}
-                todos={todos}
-                onShow={setIsShown}
-                isShown={isShown}
-                setIsModalLoading={setIsModalLoading}
+                selectedTodo={selectedTodo}
+                setSelectedTodo={setSelectedTodo}
+                todos={filteredTodos}
               />
             </div>
           </div>
         </div>
       </div>
 
-      {isShown && (
+      {selectedTodo && (
         <TodoModal
-          todo={todo}
-          user={user}
-          isModalLoading={isModalLoading}
-          onShow={setIsShown}
+          selectedTodo={selectedTodo}
+          setSelectedTodo={setSelectedTodo}
         />
       )}
     </>
